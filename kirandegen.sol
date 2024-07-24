@@ -1,6 +1,7 @@
-
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.19;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IERC20 {
     function totalSupply() external view returns (uint);
@@ -10,10 +11,9 @@ interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint amount);
 }
 
-contract ERC20 is IERC20 {
-    address public immutable owner;
+contract ERC20 is IERC20, Ownable {
     uint public totalSupply;
-    mapping (address => uint) public balanceOf;
+    mapping(address => uint) public balanceOf;
 
     struct Item {
         uint itemId;
@@ -30,14 +30,8 @@ contract ERC20 is IERC20 {
     // Event to log item redemption
     event ItemRedeemed(address indexed user, uint indexed itemId, string itemName, uint itemPrice);
 
-    constructor() {
-        owner = msg.sender;
+    constructor() Ownable(msg.sender) {
         totalSupply = 0;
-    }
-
-    modifier onlyOwner {
-        require(msg.sender == owner, "Only owner can access this function");
-        _;
     }
 
     string public constant name = "Degen";
@@ -54,7 +48,7 @@ contract ERC20 is IERC20 {
         return true;
     }
 
-    function mint(address receiver,uint amount) external onlyOwner {
+    function mint(address receiver, uint amount) external onlyOwner {
         balanceOf[receiver] += amount;
         totalSupply += amount;
         emit Transfer(address(0), receiver, amount);
@@ -69,7 +63,7 @@ contract ERC20 is IERC20 {
         emit Transfer(msg.sender, address(0), amount);
     }
     
-    function addItem(string memory itemName, uint256 itemPrice) external onlyOwner {
+    function addItem(string memory itemName, uint itemPrice) external onlyOwner {
         itemCount++;
         Item memory newItem = Item(itemCount, itemName, itemPrice);
         items[itemCount] = newItem;
@@ -93,11 +87,11 @@ contract ERC20 is IERC20 {
         require(!redeemedItems[msg.sender][itemId], "Item already redeemed");
 
         balanceOf[msg.sender] -= redeemedItem.itemPrice;
-        balanceOf[owner] += redeemedItem.itemPrice;
+        balanceOf[owner()] += redeemedItem.itemPrice;
 
         redeemedItems[msg.sender][itemId] = true;
 
-        emit Transfer(msg.sender, owner, redeemedItem.itemPrice);
+        emit Transfer(msg.sender, owner(), redeemedItem.itemPrice);
         emit ItemRedeemed(msg.sender, itemId, redeemedItem.itemName, redeemedItem.itemPrice);
     }
 }
